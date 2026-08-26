@@ -27,6 +27,19 @@ def test_g1_uses_the_free_base_name_expected_by_tasks():
         assert model.joint("free_base").id == 0
 
 
+def test_truck_package_density_matches_robot_collision_contract():
+    expected = {
+        "h1_pos_truck.xml": np.array([0.12, 0.20, 0.24, 0.30, 0.32]),
+        "g1_torque_truck.xml": np.array([0.24, 0.40, 0.48, 0.60, 0.64]),
+    }
+    package_names = ("package_a", "package_b", "package_c", "package_d", "package_e")
+
+    for scene, masses in expected.items():
+        model = mujoco.MjModel.from_xml_path(str(ASSET_ROOT / "envs" / scene))
+        actual = np.array([model.body_mass[model.body(package).id] for package in package_names])
+        np.testing.assert_allclose(actual, masses)
+
+
 def test_room_reset_leaves_the_g1_hand_qpos_untouched():
     env = SimpleNamespace(
         data=SimpleNamespace(qpos=np.zeros(86), qvel=np.zeros(85))
