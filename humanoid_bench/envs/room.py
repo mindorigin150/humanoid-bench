@@ -136,7 +136,7 @@ class Room(Task):
     def reset_model(self):
         position = self._env.data.qpos.flat.copy()
         velocity = self._env.data.qvel.flat.copy()
-        for i in range(-7, 0):
+        for i in range(-6, 0):
             position[i * 7] = np.random.uniform(-3.5 + (i + 7), -3.5 + (i + 8))
             position[i * 7 + 1] = np.random.uniform(1.2, 3.5) * np.random.choice(
                 [1, -1]
