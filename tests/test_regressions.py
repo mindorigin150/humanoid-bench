@@ -5,6 +5,7 @@ import numpy as np
 from types import SimpleNamespace
 
 from humanoid_bench.envs.room import Room
+from humanoid_bench.envs.truck import Truck
 
 
 ASSET_ROOT = Path(__file__).parents[1] / "humanoid_bench" / "assets"
@@ -33,3 +34,27 @@ def test_room_reset_leaves_the_g1_hand_qpos_untouched():
     task._env = env
     task.reset_model()
     assert (env.data.qpos[37:44] == 0).all()
+
+
+def test_truck_reset_rebuilds_episode_bookkeeping():
+    package_list = ["package_a", "package_b"]
+    env = SimpleNamespace(
+        data=SimpleNamespace(qpos=np.zeros(2), qvel=np.zeros(2)),
+        named=SimpleNamespace(
+            data=SimpleNamespace(
+                xpos={package: np.array([0, 0, index + 1]) for index, package in enumerate(package_list)}
+            )
+        ),
+    )
+    task = Truck()
+    task._env = env
+    task.package_list = package_list
+    task.packages_on_truck = []
+    task.packages_picked_up = package_list[:1]
+    task.packages_on_table = package_list[1:]
+    task.initial_zs = {}
+    task.reset_model()
+    assert task.packages_on_truck == package_list
+    assert task.packages_picked_up == []
+    assert task.packages_on_table == []
+    assert task.initial_zs == {"package_a": 1, "package_b": 2}
