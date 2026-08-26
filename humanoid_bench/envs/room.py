@@ -150,11 +150,11 @@ class Room(Task):
                 [1, -1]
             )
             if i == -4:
-                position[i * 7 + 2] = 0
+                position[i * 7 + 2] = 0.08
                 position[i * 7 + 3 : i * 7 + 7] = np.array(
                     [0.0733422, 0.0519076, -0.240058, -0.966591]
                 )
             elif i == -3:
-                position[i * 7 + 2] = 0.1
+                position[i * 7 + 2] = 0.15
         self._env.set_state(position, velocity)
         return super().reset_model()
