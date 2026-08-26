@@ -52,6 +52,10 @@ def test_room_reset_leaves_the_g1_hand_qpos_untouched():
     assert (np.abs(object_qpos[:, 1]) <= 3.5).all()
     assert object_qpos[2, 2] == 0.082
     assert object_qpos[3, 2] == 0.15
+    np.testing.assert_array_equal(
+        object_qpos[:, 2], np.array([0.01, 0.01, 0.082, 0.15, 0.11, 0.01])
+    )
+    np.testing.assert_array_equal(object_qpos[3, 3:], np.array([1, 0, 0, 0]))
 
 
 def test_room_reset_has_no_task_object_floor_penetration():
@@ -86,6 +90,10 @@ def test_room_reset_has_no_task_object_floor_penetration():
         floor_geom_id = model.geom("floor").id
         for seed in (0, 1, 7, 42, 99):
             mujoco.mj_resetDataKeyframe(model, data, 0)
+            mujoco.mj_forward(model, data)
+            data.qpos[:] += np.random.default_rng(seed).uniform(
+                -0.005, 0.005, size=model.nq
+            )
             mujoco.mj_forward(model, data)
             np.random.seed(seed)
             task.reset_model()
