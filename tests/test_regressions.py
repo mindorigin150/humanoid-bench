@@ -6,6 +6,7 @@ from types import SimpleNamespace
 
 import humanoid_bench.env as env_module
 from humanoid_bench.envs.highbar import HighBarSimple
+from humanoid_bench.envs.package import Package
 from humanoid_bench.envs.room import Room
 from humanoid_bench.envs.spoon import Spoon
 from humanoid_bench.envs.truck import Truck
@@ -99,3 +100,33 @@ def test_highbar_reset_applies_no_qpos_noise_before_grasp_initialization(monkeyp
     monkeypatch.setattr(env_module.mujoco, "mj_forward", lambda *args: None)
     env_module.HumanoidEnv.reset_model(env)
     assert uniform_calls[0][:2] == (0, 0)
+
+
+def test_package_reset_observes_the_new_destination(monkeypatch):
+    data = SimpleNamespace(qpos=np.zeros(8), qvel=np.zeros(7))
+    model = SimpleNamespace(body_pos=np.zeros((1, 3)))
+    named_data = SimpleNamespace(
+        site_xpos={"destination_loc": np.zeros(3)},
+    )
+    env = SimpleNamespace(
+        data=data,
+        model=model,
+        named=SimpleNamespace(data=named_data),
+        render_mode=None,
+    )
+    env.set_state = lambda qpos, qvel: (
+        setattr(data, "qpos", qpos), setattr(data, "qvel", qvel)
+    )
+    robot = SimpleNamespace(
+        dof=1,
+        left_hand_position=lambda: np.zeros(3),
+        right_hand_position=lambda: np.zeros(3),
+    )
+
+    def forward(_model, _data):
+        named_data.site_xpos["destination_loc"] = model.body_pos[-1].copy()
+
+    monkeypatch.setattr(mujoco, "mj_forward", forward)
+    np.random.seed(7)
+    observation = Package(robot, env).reset_model()
+    np.testing.assert_array_equal(observation[1:4], model.body_pos[-1])
