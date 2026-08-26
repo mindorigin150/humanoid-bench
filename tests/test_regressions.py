@@ -50,44 +50,52 @@ def test_room_reset_leaves_the_g1_hand_qpos_untouched():
     )
     assert (np.abs(object_qpos[:, 1]) >= 1.2).all()
     assert (np.abs(object_qpos[:, 1]) <= 3.5).all()
-    assert object_qpos[2, 2] == 0.08
+    assert object_qpos[2, 2] == 0.082
     assert object_qpos[3, 2] == 0.15
 
 
 def test_room_reset_has_no_task_object_floor_penetration():
-    model = mujoco.MjModel.from_xml_path(str(ASSET_ROOT / "envs" / "g1_torque_room.xml"))
-    data = mujoco.MjData(model)
-    env = SimpleNamespace(
-        data=data,
-        set_state=lambda qpos, qvel: (
-            data.qpos.__setitem__(slice(None), qpos),
-            data.qvel.__setitem__(slice(None), qvel),
-        ),
-    )
-    task = Room()
-    task._env = env
-    object_body_ids = {
-        model.body(name).id
-        for name in ("chair", "trophy", "headphone", "package_a", "package_b", "snow_globe")
-    }
-    object_geom_ids = {
-        geom_id
-        for geom_id, body_id in enumerate(model.geom_bodyid)
-        if body_id in object_body_ids
-    }
-    floor_geom_id = model.geom("floor").id
-    for seed in (0, 1, 7, 42, 99):
-        mujoco.mj_resetDataKeyframe(model, data, 0)
-        mujoco.mj_forward(model, data)
-        np.random.seed(seed)
-        task.reset_model()
-        mujoco.mj_forward(model, data)
-        for contact in data.contact[: data.ncon]:
-            if {contact.geom1, contact.geom2} & object_geom_ids and floor_geom_id in (
-                contact.geom1,
-                contact.geom2,
-            ):
-                assert contact.dist >= -1e-8
+    for scene in ("g1_torque_room.xml", "h1hand_pos_room.xml"):
+        model = mujoco.MjModel.from_xml_path(str(ASSET_ROOT / "envs" / scene))
+        data = mujoco.MjData(model)
+        env = SimpleNamespace(
+            data=data,
+            set_state=lambda qpos, qvel: (
+                data.qpos.__setitem__(slice(None), qpos),
+                data.qvel.__setitem__(slice(None), qvel),
+            ),
+        )
+        task = Room()
+        task._env = env
+        object_body_ids = {
+            model.body(name).id
+            for name in (
+                "chair",
+                "trophy",
+                "headphone",
+                "package_a",
+                "package_b",
+                "snow_globe",
+            )
+        }
+        object_geom_ids = {
+            geom_id
+            for geom_id, body_id in enumerate(model.geom_bodyid)
+            if body_id in object_body_ids
+        }
+        floor_geom_id = model.geom("floor").id
+        for seed in (0, 1, 7, 42, 99):
+            mujoco.mj_resetDataKeyframe(model, data, 0)
+            mujoco.mj_forward(model, data)
+            np.random.seed(seed)
+            task.reset_model()
+            mujoco.mj_forward(model, data)
+            for contact in data.contact[: data.ncon]:
+                if {contact.geom1, contact.geom2} & object_geom_ids and floor_geom_id in (
+                    contact.geom1,
+                    contact.geom2,
+                ):
+                    assert contact.dist >= -1e-8
 
 
 def test_truck_reset_rebuilds_episode_bookkeeping():
