@@ -4,6 +4,8 @@ import mujoco
 import numpy as np
 from types import SimpleNamespace
 
+import humanoid_bench.env as env_module
+from humanoid_bench.envs.highbar import HighBarSimple
 from humanoid_bench.envs.room import Room
 from humanoid_bench.envs.spoon import Spoon
 from humanoid_bench.envs.truck import Truck
@@ -70,3 +72,30 @@ def test_spoon_reset_restarts_target_phase():
     obs = task.reset_model()
     assert task.step_counter == 0
     assert (obs[-3:] == np.array([0.81, -0.1, 0.95])).all()
+
+
+def test_highbar_reset_applies_no_qpos_noise_before_grasp_initialization(monkeypatch):
+    data = SimpleNamespace(qpos=np.zeros(3), qvel=np.zeros(2))
+    uniform_calls = []
+
+    def uniform(low, high, size):
+        uniform_calls.append((low, high, size))
+        return np.ones(size)
+
+    env = SimpleNamespace(
+        model=SimpleNamespace(nq=3),
+        data=data,
+        keyframe=0,
+        randomness=0.01,
+        np_random=SimpleNamespace(uniform=uniform),
+    )
+    task = HighBarSimple()
+    task._env = env
+    env.task = task
+    env.set_state = lambda qpos, qvel: (
+        setattr(data, "qpos", qpos), setattr(data, "qvel", qvel)
+    )
+    monkeypatch.setattr(env_module.mujoco, "mj_resetDataKeyframe", lambda *args: None)
+    monkeypatch.setattr(env_module.mujoco, "mj_forward", lambda *args: None)
+    env_module.HumanoidEnv.reset_model(env)
+    assert uniform_calls[0][:2] == (0, 0)
