@@ -36,8 +36,22 @@ def test_room_reset_leaves_the_g1_hand_qpos_untouched():
     )
     task = Room()
     task._env = env
+    np.random.seed(0)
     task.reset_model()
     assert (env.data.qpos[37:44] == 0).all()
+    object_qpos = env.data.qpos[-42:].reshape(6, 7)
+    np.testing.assert_array_less(
+        object_qpos[:, 0],
+        np.array([-3.0, -2.0, -1.0, 0.0, 1.0, 2.0]),
+    )
+    np.testing.assert_array_less(
+        np.array([-3.5, -2.5, -1.5, -0.5, 0.5, 1.5]),
+        object_qpos[:, 0],
+    )
+    assert (np.abs(object_qpos[:, 1]) >= 1.2).all()
+    assert (np.abs(object_qpos[:, 1]) <= 3.5).all()
+    assert object_qpos[2, 2] == 0
+    assert object_qpos[3, 2] == 0.1
 
 
 def test_truck_reset_rebuilds_episode_bookkeeping():
