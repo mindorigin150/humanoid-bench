@@ -5,6 +5,7 @@ import numpy as np
 from types import SimpleNamespace
 
 from humanoid_bench.envs.room import Room
+from humanoid_bench.envs.spoon import Spoon
 from humanoid_bench.envs.truck import Truck
 
 
@@ -58,3 +59,14 @@ def test_truck_reset_rebuilds_episode_bookkeeping():
     assert task.packages_picked_up == []
     assert task.packages_on_table == []
     assert task.initial_zs == {"package_a": 1, "package_b": 2}
+
+
+def test_spoon_reset_restarts_target_phase():
+    task = Spoon()
+    task._env = SimpleNamespace(
+        data=SimpleNamespace(qpos=np.zeros(1), qvel=np.zeros(1))
+    )
+    task.step_counter = 19
+    obs = task.reset_model()
+    assert task.step_counter == 0
+    assert (obs[-3:] == np.array([0.81, -0.1, 0.95])).all()
